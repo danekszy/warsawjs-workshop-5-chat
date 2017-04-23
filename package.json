@@ -1,0 +1,22 @@
+{
+  "name": "warsawjs-workshop-5-chat",
+  "version": "1.0.0",
+  "description": "Sunday Warsaw workshop repo (draft code)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danekszy/warsawjs-workshop-5-chat.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/danekszy/warsawjs-workshop-5-chat/issues"
+  },
+  "homepage": "https://github.com/danekszy/warsawjs-workshop-5-chat#readme",
+  "scripts": {
+    "start": "node index.js"
+  }
+}
