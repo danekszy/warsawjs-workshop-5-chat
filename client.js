@@ -13,6 +13,18 @@ const rl = readline.createInterface({
 
 const userData = {
     name: null,
+    isLoggedIn: false,
+};
+
+const PROMPT_COMMANDS = {
+    login: (user, pass) => {
+        userData.name = user;
+        userData.pass = pass;
+        userData.isLoggedIn = true;
+        rl.setPrompt(`✏️  ${userData.name} > `);
+        initChatLogging();
+        rl.prompt();
+    },
 };
 
 const writeLine = (line, ...args) => {
@@ -21,44 +33,79 @@ const writeLine = (line, ...args) => {
     process.stdout.write(util.format(line, ...args) + EOL);
 };
 
-const askForAMsg = () => {
+const handleUserCommand = (line) => {
+    const commandParts = line
+        .slice(1)
+        .split(' ')
+        .filter((arg) => arg.length > 0);
+    const commandName = commandParts[0];
+    const commandArgs = commandParts.slice(1);
+    const commandFn = PROMPT_COMMANDS[commandName];
+
+    if (commandFn) {
+        commandFn(...commandArgs);
+    } else {
+        console.log(`Invalid command ${commandName}`);
+    }
+};
+
+const handleUserInput = (line) => {
+    if (line.trim().length < 1) return rl.prompt();
+
+    if (line.startsWith('/')) {
+        handleUserCommand(line);
+    } else {
+        connection.emit('message', { message: line });
+    }
     rl.prompt();
 };
 
 const initChatLogging = () => {
     connection.on('broadcast', (data) => {
         writeLine(`🗯  ${data.userName}: ${data.message}`);
-        askForAMsg();
-    });
-
-    rl.on('line', (line) => {
-        connection.emit('message', { message: line });
-
         rl.prompt();
     });
+
+    rl.on('line', handleUserInput);
 };
 
-const initConnection = () => {
-    connection = socketClient(CLIENT_URL);
-    connection.emit('login', { userData });
-
-    connection.on('loginResult', (result) => {
-        if (result.success) {
-            console.log(`👋  Hello ${userData.name}!`);
-            rl.setPrompt('> ');
-            initChatLogging();
-            askForAMsg();
-        } else {
-            console.log(`Login failed. Error: ${result.errorMsg}`);
-            initApp();
-        }
+const authUser = (user, pass) => {
+    return new Promise((resolve, reject) => {
+        connection.emit('login', { name: user, pass });
+        connection.on('loginResult', (result) => {
+            if (result.success) resolve();
+            else reject(result.errorMsg);
+        });
     });
 };
 
 const initApp = () => {
-    rl.question('Whats your name? \n', (name) => {
-        userData.name = name;
-        initConnection();
+    connection = socketClient(CLIENT_URL);
+
+    connection.on('disconnect', () => {
+        console.log('\n 🔥  Server disconnected');
+    });
+
+    connection.on('connect', () => {
+        if (userData.isLoggedIn) {
+            authUser(userData.name, userData.pass)
+                .then(() => {
+                    console.log(' ⚡️  Server reconnected');
+                });
+        } else {
+            rl.question('Whats your name? \n', (name) => {
+                rl.question('Password? \n', (pass) => {
+                    authUser(name, pass)
+                        .then(() => {
+                            console.log(`👋  Hello ${name}!`);
+                            PROMPT_COMMANDS.login(name, pass);
+                        }, (error) => {
+                            console.log(`Login failed. Error: ${error}`);
+                            initApp();
+                        });
+                });
+            });
+        }
     });
 };
 
