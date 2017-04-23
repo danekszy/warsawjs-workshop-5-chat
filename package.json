@@ -17,8 +17,11 @@
   },
   "homepage": "https://github.com/danekszy/warsawjs-workshop-5-chat#readme",
   "dependencies": {
+    "bcrypt": "^1.0.2",
+    "level": "^1.6.0",
     "socket.io": "^1.7.3",
-    "socket.io-client": "^1.7.3"
+    "socket.io-client": "^1.7.3",
+    "then-levelup": "^1.0.2"
   },
   "devDependencies": {
     "eslint": "^3.19.0",

@@ -18,12 +18,35 @@ const userData = {
 
 const PROMPT_COMMANDS = {
     login: (user, pass) => {
-        userData.name = user;
-        userData.pass = pass;
-        userData.isLoggedIn = true;
-        rl.setPrompt(`✏️  ${userData.name} > `);
-        initChatLogging();
-        rl.prompt();
+        authUser(user, pass)
+            .then(() => {
+                userData.name = user;
+                userData.pass = pass;
+                userData.isLoggedIn = true;
+                console.log(`👋  Hello ${user}!`);
+                rl.setPrompt(`✏️  ${user} > `);
+                initChatLogging();
+                rl.prompt();
+            }, (error) => {
+                console.log(`❌  Login failed. Error: ${error}`);
+                rl.prompt();
+            });
+    },
+    register: (user, pass) => {
+        connection.emit('register', { name: user, pass });
+        connection.on('registerResult', (result) => {
+            if (result.success) {
+                console.log(`✅  User registered - 👋  Hello ${user}!`);
+                userData.name = user;
+                userData.pass = pass;
+                userData.isLoggedIn = true;
+                rl.setPrompt(`✏️  ${user} > `);
+                initChatLogging();
+                rl.prompt();
+            } else {
+                console.log(result.errorMsg);
+            }
+        });
     },
 };
 
@@ -65,19 +88,17 @@ const initChatLogging = () => {
         writeLine(`🗯  ${data.userName}: ${data.message}`);
         rl.prompt();
     });
-
-    rl.on('line', handleUserInput);
 };
 
-const authUser = (user, pass) => {
-    return new Promise((resolve, reject) => {
+const authUser = (user, pass) => (
+    new Promise((resolve, reject) => {
         connection.emit('login', { name: user, pass });
         connection.on('loginResult', (result) => {
             if (result.success) resolve();
             else reject(result.errorMsg);
         });
-    });
-};
+    })
+);
 
 const initApp = () => {
     connection = socketClient(CLIENT_URL);
@@ -90,21 +111,17 @@ const initApp = () => {
         if (userData.isLoggedIn) {
             authUser(userData.name, userData.pass)
                 .then(() => {
-                    console.log(' ⚡️  Server reconnected');
+                    console.log('\n ⚡️  Server reconnected');
                 });
         } else {
-            rl.question('Whats your name? \n', (name) => {
-                rl.question('Password? \n', (pass) => {
-                    authUser(name, pass)
-                        .then(() => {
-                            console.log(`👋  Hello ${name}!`);
-                            PROMPT_COMMANDS.login(name, pass);
-                        }, (error) => {
-                            console.log(`Login failed. Error: ${error}`);
-                            initApp();
-                        });
-                });
-            });
+            console.log('Connected to server. What do you want to do?');
+
+            return rl.on('line', handleUserInput);
+            // rl.question('❔  Whats your name? \n', (name) => {
+            //     rl.question('🔐  Password? \n', (pass) => {
+            //         PROMPT_COMMANDS.login(name, pass);
+            //     });
+            // });
         }
     });
 };
