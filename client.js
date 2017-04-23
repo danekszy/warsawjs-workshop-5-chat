@@ -1,9 +1,41 @@
 const CLIENT_URL = 'http://localhost:3000';
+const readline = require('readline');
+const socketClient = require('socket.io-client');
+let socket;
 
-const socket = require('socket.io-client')(CLIENT_URL);
-
-socket.on('message', (data) => {
-    console.log(`Server says: ${JSON.stringify(data)}`);
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
 });
 
-socket.emit('pushback', { body: 'hello from client' });
+const userData = {
+    name: null,
+};
+
+const askForAMsg = () => {
+    rl.question(`${userData.name}: \n`, (body) => {
+        socket.emit('message', { userData, body });
+
+        askForAMsg();
+    });
+};
+
+const initConnection = () => {
+    socket = socketClient(CLIENT_URL);
+    socket.on('broadcast', (data) => {
+        console.log(`🗯 ${data.name}: ${data.body}`);
+    });
+
+    askForAMsg();
+};
+
+const initApp = () => {
+    rl.question('Whats your name? \n', (name) => {
+        userData.name = name;
+        console.log(`Hello ${name}! 👋`);
+        initConnection();
+    });
+};
+
+initApp();
+//   rl.close();
